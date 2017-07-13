@@ -1,61 +1,125 @@
 var canvas = document.createElement('canvas')
 canvas.width = 256
 canvas.height = 256
+canvas.style.width = '256px'
+canvas.style.height = '256px'
 canvas.style.border = 'solid 1px rgba(0, 0, 0, 0.1)'
 
-var currentColor = 'black'
+var sliderContainer = document.createElement('div')
+
+function createColorSlider (startVal) {
+  var colorSlider = document.createElement('input')
+  colorSlider.value = startVal
+  colorSlider.type = 'range'
+  colorSlider.min = 0
+  colorSlider.max = 255
+  colorSlider.step = 1
+  colorSlider.oninput = handleSliderChange
+
+  return colorSlider
+}
+function createSliderWrapper (label, colorSlider) {
+  var sliderLabel = document.createElement('label')
+  sliderLabel.display = 'inline-block'
+  sliderLabel.innerHTML = label
+
+  var sliderWrapper = document.createElement('div')
+  sliderWrapper.appendChild(sliderLabel)
+  sliderWrapper.appendChild(colorSlider)
+
+  sliderWrapper.display = 'block'
+
+  return sliderWrapper
+}
+
+var redSlider = createColorSlider(150)
+var blueSlider = createColorSlider(200)
+var greenSlider = createColorSlider(10)
+
+var currentColor = 'purple'
+
+function handleSliderChange () {
+  currentColor = `rgb(${redSlider.value}, ${greenSlider.value}, ${blueSlider.value})`
+  redDisplay.innerHTML = 'rgb(' + redSlider.value + ', '
+  greenDisplay.innerHTML = blueSlider.value + ', '
+  blueDisplay.innerHTML = greenSlider.value + ')'
+  swatchDisplay.style.backgroundColor = currentColor
+}
+sliderContainer.appendChild(createSliderWrapper('R', redSlider))
+sliderContainer.appendChild(createSliderWrapper('G', greenSlider))
+sliderContainer.appendChild(createSliderWrapper('B', blueSlider))
+
+var redDisplay = document.createElement('span')
+redDisplay.innerHTML = 'rgb(' + redSlider.value + ','
+var greenDisplay = document.createElement('span')
+greenDisplay.innerHTML = greenSlider.value + ','
+var blueDisplay = document.createElement('span')
+blueDisplay.innerHTML = blueSlider.value + ')'
+var swatchDisplay = document.createElement('div')
+swatchDisplay.style.backgroundColor = 'purple'
+swatchDisplay.style.width = '20px'
+swatchDisplay.style.height = '20px'
+swatchDisplay.style.marginRight = '5px'
+
+var colorContainer = document.createElement('div')
+colorContainer.style.display = 'flex'
+colorContainer.style.alignItems = 'center'
+colorContainer.appendChild(swatchDisplay)
+colorContainer.appendChild(redDisplay)
+colorContainer.appendChild(greenDisplay)
+colorContainer.appendChild(blueDisplay)
 
 var buttonContainer = document.createElement('div')
+buttonContainer.style.display = 'flex'
+buttonContainer.style.width = '300px'
+buttonContainer.style.flexWrap = 'wrap'
 
-// TODO: for loop this. Getting too long for no reason
-// we aren't trying to learn about buttons lol
-var redButton = document.createElement('button')
-redButton.style.color = 'rgb(255, 0, 0)'
-redButton.style.fontSize = '24px'
-redButton.style.cursor = 'pointer'
-redButton.innerHTML = 'red'
-redButton.onclick = function () { currentColor = 'rgb(255, 0, 0)' }
+function createColorButton (color, label) {
+  var colorButton = document.createElement('button')
 
-var greenButton = document.createElement('button')
-greenButton.style.color = 'rgb(0, 255, 0)'
-greenButton.style.fontSize = '24px'
-greenButton.style.cursor = 'pointer'
-greenButton.innerHTML = 'green'
-greenButton.onclick = function () { currentColor = 'rgb(0, 255, 0)' }
+  colorButton.style.color = `rgb(${color.join(',')})`
+  colorButton.style.fontSize = '24px'
+  colorButton.style.cursor = 'pointer'
+  colorButton.style.marginTop = '5px'
+  colorButton.style.marginRight = '5px'
+  colorButton.innerHTML = label
+  colorButton.onclick = function () {
+    currentColor = `rgb(${color.join(',')})`
+    redDisplay.innerHTML = 'rgb(' + color[0] + ', '
+    greenDisplay.innerHTML = color[1] + ', '
+    blueDisplay.innerHTML = color[2] + ')'
+    redSlider.value = color[0]
+    greenSlider.value = color[1]
+    blueSlider.value = color[2]
+    swatchDisplay.style.backgroundColor = currentColor
+  }
 
-var blueButton = document.createElement('button')
-blueButton.style.color = 'rgb(0, 0, 255)'
-blueButton.style.fontSize = '24px'
-blueButton.style.cursor = 'pointer'
-blueButton.innerHTML = 'blue'
-blueButton.onclick = function () { currentColor = 'rgb(0, 0, 255)' }
+  buttonContainer.appendChild(colorButton)
+}
 
-var blackButton = document.createElement('button')
-blackButton.style.color = 'black'
-blackButton.style.fontSize = '24px'
-blackButton.style.cursor = 'pointer'
-blackButton.innerHTML = 'black'
-blackButton.onclick = function () { currentColor = 'black' }
-
-var purpleButton = document.createElement('button')
-purpleButton.style.color = 'purple'
-purpleButton.style.fontSize = '24px'
-purpleButton.style.cursor = 'pointer'
-purpleButton.innerHTML = 'purple'
-purpleButton.onclick = function () { currentColor = 'purple' }
-
-buttonContainer.appendChild(redButton)
-buttonContainer.appendChild(greenButton)
-buttonContainer.appendChild(blueButton)
-buttonContainer.appendChild(blackButton)
-buttonContainer.appendChild(purpleButton)
+createColorButton([255, 0, 0], 'lava')
+createColorButton([0, 255, 0], 'moss')
+createColorButton([0, 0, 255], 'water')
+createColorButton([0, 0, 0], 'stone')
 
 var mountElem = document.querySelector('#webgl-blend-map-tutorial') || document.body
 mountElem.appendChild(buttonContainer)
-mountElem.appendChild(canvas)
+mountElem.appendChild(sliderContainer)
+mountElem.appendChild(colorContainer)
+
+var webGLCanvas = document.createElement('canvas')
+webGLCanvas.width = 512
+webGLCanvas.height = 512
+mountElem.appendChild(webGLCanvas)
+
+var canvasContainer = document.createElement('div')
+canvasContainer.style.display = 'flex'
+canvasContainer.appendChild(canvas)
+canvasContainer.appendChild(webGLCanvas)
+mountElem.appendChild(canvasContainer)
 
 var context = canvas.getContext('2d')
-context.fillStyle = 'purple'
+context.fillStyle = currentColor
 context.fillRect(0, 0, context.canvas.width, context.canvas.height)
 
 var blendmapImage = new window.Image()
@@ -142,11 +206,6 @@ function repaint () {
 /**
  * WebGL Canvas Code
  */
-var webGLCanvas = document.createElement('canvas')
-webGLCanvas.width = 512
-webGLCanvas.height = 512
-mountElem.appendChild(webGLCanvas)
-
 var gl = webGLCanvas.getContext('webgl')
 gl.clearColor(0.0, 0.0, 0.0, 1.0)
 
@@ -206,7 +265,7 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
 gl.bindBuffer(gl.ARRAY_BUFFER, vertexUVsBuffer)
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW)
 
-var count = 0
+var bothImagesLoaded = false
 function handleLoadedTexture (texture, image) {
   gl.bindTexture(gl.TEXTURE_2D, texture)
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -216,10 +275,10 @@ function handleLoadedTexture (texture, image) {
   // Do we need this line?
   gl.bindTexture(gl.TEXTURE_2D, null)
 
-  count += 1
-  if (count === 2) {
+  if (bothImagesLoaded) {
     setUpWebGLState()
   }
+  bothImagesLoaded = true
 }
 
 var blendmapTexture = gl.createTexture()
@@ -250,7 +309,6 @@ void main (void) {
 }
 `
 
-// TODO: Slider to control tiling from 1.0 - 20.0, start at 6.0. Pass in a uniform for 6.0 or whatever the value is
 var fragmentShader = `
 precision mediump float;
 
@@ -262,20 +320,19 @@ uniform sampler2D uTerrainSampler;
 void main (void) {
  vec4 blendColor = texture2D(uBlendmapSampler, vec2(vTextureCoord.s, vTextureCoord.t));
 
- vec4 mossColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5), mod(vTextureCoord.t * 0.5 * 6.0, 0.5) - 0.5));
+ vec4 rockColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * 6.0, 0.5)));
 
  vec4 lavaColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * 6.0, 0.5) - 0.5));
 
- vec4 rockColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * 6.0, 0.5)));
+ vec4 mossColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5), mod(vTextureCoord.t * 0.5 * 6.0, 0.5) - 0.5));
 
  vec4 waterColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5), mod(vTextureCoord.t * 0.5 * 6.0, 0.5)));
- float foo = mod (2.0, 1.0);
 
  float blackWeight = 1.0 - blendColor.x - blendColor.y - blendColor.z;
 
- gl_FragColor = mossColor * blackWeight +
+ gl_FragColor = rockColor * blackWeight +
  lavaColor * blendColor.x +
- rockColor * blendColor.y +
+ mossColor * blendColor.y +
  waterColor * blendColor.z;
 }
 `
@@ -329,7 +386,7 @@ function setUpWebGLState () {
 // TODO: Use create-draw-function. Write unit tests two accept two textures
 function drawWebGLCanvas () {
   setUpWebGLState()
-  if (count === 2) {
+  if (bothImagesLoaded) {
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.viewport(0, 0, 512, 512)
 
