@@ -1,9 +1,9 @@
-var canvas = document.createElement('canvas')
-canvas.width = 256
-canvas.height = 256
-canvas.style.width = '256px'
-canvas.style.height = '256px'
-canvas.style.border = 'solid 1px rgba(0, 0, 0, 0.1)'
+var drawCanvas = document.createElement('canvas')
+drawCanvas.width = 256
+drawCanvas.height = 256
+drawCanvas.style.width = '256px'
+drawCanvas.style.height = '256px'
+drawCanvas.style.border = 'solid 1px rgba(0, 0, 0, 0.1)'
 
 var sliderContainer = document.createElement('div')
 
@@ -114,16 +114,16 @@ mountElem.appendChild(webGLCanvas)
 
 var canvasContainer = document.createElement('div')
 canvasContainer.style.display = 'flex'
-canvasContainer.appendChild(canvas)
+canvasContainer.appendChild(drawCanvas)
 canvasContainer.appendChild(webGLCanvas)
 mountElem.appendChild(canvasContainer)
 
-var context = canvas.getContext('2d')
+var context = drawCanvas.getContext('2d')
 context.fillStyle = currentColor
 context.fillRect(0, 0, context.canvas.width, context.canvas.height)
 
 var blendmapImage = new window.Image()
-blendmapImage.src = canvas.toDataURL()
+blendmapImage.src = drawCanvas.toDataURL()
 
 var terrainImage = new window.Image()
 
@@ -132,8 +132,8 @@ var isPainting = false
 function startPainting (e) {
   isPainting = true
   addPoint(
-      e.pageX - canvas.offsetLeft,
-      e.pageY - canvas.offsetTop,
+      e.pageX - drawCanvas.offsetLeft,
+      e.pageY - drawCanvas.offsetTop,
       false
   )
   repaint()
@@ -142,24 +142,24 @@ function startPainting (e) {
 function movePaintbrush (e) {
   if (isPainting) {
     addPoint(
-      (e.pageX || e.changedTouches[0].pageX) - canvas.offsetLeft,
-      (e.pageY || e.changedTouches[0].pageY) - canvas.offsetTop,
+      (e.pageX || e.changedTouches[0].pageX) - drawCanvas.offsetLeft,
+      (e.pageY || e.changedTouches[0].pageY) - drawCanvas.offsetTop,
       true
     )
     repaint()
   }
 }
 
-canvas.addEventListener('mousedown', startPainting)
-canvas.addEventListener('touchstart', startPainting)
+drawCanvas.addEventListener('mousedown', startPainting)
+drawCanvas.addEventListener('touchstart', startPainting)
 
-canvas.addEventListener('mousemove', movePaintbrush)
-canvas.addEventListener('touchmove', movePaintbrush)
+drawCanvas.addEventListener('mousemove', movePaintbrush)
+drawCanvas.addEventListener('touchmove', movePaintbrush)
 
-canvas.addEventListener('mouseup', function (e) {
+drawCanvas.addEventListener('mouseup', function (e) {
   isPainting = false
 })
-canvas.addEventListener('touchend', function (e) {
+drawCanvas.addEventListener('touchend', function (e) {
   isPainting = false
 })
 
@@ -194,11 +194,11 @@ function repaint () {
     context.stroke()
   }
 
-  blendmapImage.src = canvas.toDataURL()
+  blendmapImage.src = drawCanvas.toDataURL()
   blendmapImage.onload = function () {
     gl.bindTexture(gl.TEXTURE_2D, blendmapTexture)
-    // gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, blendmapImage)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, blendmapImage)
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, blendmapImage)
+    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, blendmapImage)
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 }
