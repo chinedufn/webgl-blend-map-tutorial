@@ -4,7 +4,7 @@
   "description": "Blend mapping tutorial for WebGL",
   "main": "index.js",
   "scripts": {
-    "start": "budo --open --live --host=127.0.0.1 index.js",
+    "start": "budo --open --live --host=127.0.0.1 tutorial.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
