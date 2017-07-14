@@ -262,12 +262,6 @@ function repaint () {
 
   // Make our WebGL canvas's blend map reload itself from the contents of our canvas
   blendmapImage.src = drawCanvas.toDataURL()
-  // Update our WebGL canvas's blendmap texture with this new 2d paint canvas image
-  blendmapImage.onload = function () {
-    gl.bindTexture(gl.TEXTURE_2D, blendmapTexture)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, blendmapImage)
-    gl.bindTexture(gl.TEXTURE_2D, null)
-  }
 }
 
 /**
@@ -376,7 +370,6 @@ function handleLoadedTexture (texture, image) {
 var blendmapTexture = gl.createTexture()
 var blendmapImage = new window.Image()
 blendmapImage.src = drawCanvas.toDataURL()
-blendmapImage.crossOrigin = 'anonymous'
 blendmapImage.onload = function () {
   handleLoadedTexture(blendmapTexture, blendmapImage)
 }
@@ -460,15 +453,15 @@ function setupWebGLState () {
   gl.enableVertexAttribArray(textureCoordAttribute)
   gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0)
 
-  var blendmapSamplerUniform = gl.getUniformLocation(shaderProgram, 'uBlendmapSampler')
-  gl.activeTexture(gl.TEXTURE0)
-  gl.bindTexture(gl.TEXTURE_2D, blendmapTexture)
-  gl.uniform1i(blendmapSamplerUniform, 0)
-
   var terrainSamplerUniform = gl.getUniformLocation(shaderProgram, 'uTerrainSampler')
   gl.activeTexture(gl.TEXTURE1)
   gl.bindTexture(gl.TEXTURE_2D, terrainTexture)
   gl.uniform1i(terrainSamplerUniform, 1)
+
+  var blendmapSamplerUniform = gl.getUniformLocation(shaderProgram, 'uBlendmapSampler')
+  gl.activeTexture(gl.TEXTURE0)
+  gl.bindTexture(gl.TEXTURE_2D, blendmapTexture)
+  gl.uniform1i(blendmapSamplerUniform, 0)
 
   var mvMatrixUniform = gl.getUniformLocation(shaderProgram, 'uMVMatrix')
   gl.uniformMatrix4fv(mvMatrixUniform, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -32, -32, 0, 1])
@@ -477,10 +470,8 @@ function setupWebGLState () {
   var pMatrixUniform = gl.getUniformLocation(shaderProgram, 'uPMatrix')
   gl.uniformMatrix4fv(pMatrixUniform, false, require('gl-mat4/perspective')([], Math.PI / 4, 400 / 400, 0.1, 1000))
 }
-
 // TODO: Use create-draw-function. Write unit tests two accept two textures
 function drawWebGLCanvas () {
-  setupWebGLState()
   if (bothImagesLoaded) {
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.viewport(0, 0, 512, 512)
