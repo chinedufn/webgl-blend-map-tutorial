@@ -84,7 +84,7 @@ colorDisplayContainer.appendChild(colorDisplay)
 // for painting one of our four textures
 var buttonContainer = document.createElement('div')
 buttonContainer.style.display = 'flex'
-buttonContainer.style.width = '300px'
+buttonContainer.style.width = '500px'
 buttonContainer.style.flexWrap = 'wrap'
 
 // Create one of our preset buttons
@@ -107,6 +107,15 @@ function createColorButton (color, label) {
 
   buttonContainer.appendChild(colorButton)
 }
+
+// Add an undo button
+var undoButton = document.createElement('button')
+undoButton.style.cursor = 'pointer'
+undoButton.style.marginRight = '5px'
+undoButton.innerHTML = 'Undo'
+undoButton.onclick = undo
+buttonContainer.appendChild(undoButton)
+
 // Create our four preset buttons. Our fragment will
 // read these colors from the blend map in order to know
 // which textures to sample
@@ -115,15 +124,8 @@ createColorButton([255, 0, 0], 'lava')
 createColorButton([0, 255, 0], 'moss')
 createColorButton([0, 0, 255], 'water')
 
-// Add an undo button
-var undoButton = document.createElement('button')
-undoButton.style.cursor = 'pointer'
-undoButton.innerHTML = 'Undo'
-undoButton.onclick = undo
-
 // Add all of our color controls into the page
 var mountElem = document.querySelector('#webgl-blend-map-tutorial') || document.body
-mountElem.appendChild(undoButton)
 mountElem.appendChild(buttonContainer)
 mountElem.appendChild(sliderContainer)
 mountElem.appendChild(colorDisplayContainer)
@@ -165,7 +167,6 @@ function startPainting (e) {
       // previous blob of paint
       false
   )
-  repaint()
 }
 
 // Add a new point to our canvas and connect it with the previous point.
@@ -179,7 +180,6 @@ function movePaintbrush (e) {
       // the previous blob of paint
       true
     )
-    repaint()
   }
 }
 
@@ -228,12 +228,11 @@ function undo () {
   }
 
   lastMouseReleaseIndices.pop()
-  repaint()
 }
 
 // Loop through all of the points in our array of paint strokes
 // and use that to re-draw our canvas
-function repaint () {
+function redrawPaintCanvas () {
   // Start by clearing our canvas
   canvas2dContext.fillRect(0, 0, canvas2dContext.canvas.width, canvas2dContext.canvas.height)
 
@@ -272,6 +271,7 @@ function repaint () {
 // draw onto our WebGL canvas
 var gl = webGLCanvas.getContext('webgl')
 gl.clearColor(0.0, 0.0, 0.0, 1.0)
+gl.viewport(0, 0, 512, 512)
 
 // Create WebGLBuffers for our vertices. We will buffer their
 // positions, the other to draw them, and the coordinates in our
@@ -338,20 +338,25 @@ for (var y = 0; y < numRowsColumns; y++) {
   }
 }
 
-gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+// Create a WebGL texture for our blend map
+var blendmapTexture = gl.createTexture()
+var blendmapImage = new window.Image()
+blendmapImage.src = drawCanvas.toDataURL()
+blendmapImage.onload = function () {
+  handleLoadedTexture(blendmapTexture, blendmapImage)
+}
 
-gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
-// Buffer objects hold a linear array of memory of arbitrary size.
-// This memory must be allocated before it can be uploaded to or used.
-// So this code gets the size, allocates the linear memory, and then fills it with this data
-// TODO: Look up what an ELEMENT_ARRAY_BUFFER is and what gl.STATIC_DRAW does
-gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
-
-gl.bindBuffer(gl.ARRAY_BUFFER, vertexUVsBuffer)
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW)
+// Create a WebGL texture for our terrain texture atlas
+var terrainTexture = gl.createTexture()
+var terrainImage = new window.Image()
+terrainImage.crossOrigin = 'anonymous'
+terrainImage.onload = function () {
+  handleLoadedTexture(terrainTexture, terrainImage)
+}
+terrainImage.src = '/terrain.jpg'
 
 var bothImagesLoaded = false
+// When our images load we and add them to our texture buffers
 function handleLoadedTexture (texture, image) {
   gl.bindTexture(gl.TEXTURE_2D, texture)
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -361,27 +366,16 @@ function handleLoadedTexture (texture, image) {
   // Do we need this line?
   gl.bindTexture(gl.TEXTURE_2D, null)
 
+  // Once both images have loaded we set up all of the WebGL state that
+  // we'll need to draw our WebGL terrain
   if (bothImagesLoaded) {
     setupWebGLState()
   }
   bothImagesLoaded = true
 }
 
-var blendmapTexture = gl.createTexture()
-var blendmapImage = new window.Image()
-blendmapImage.src = drawCanvas.toDataURL()
-blendmapImage.onload = function () {
-  handleLoadedTexture(blendmapTexture, blendmapImage)
-}
 
-var terrainTexture = gl.createTexture()
-var terrainImage = new window.Image()
-terrainImage.crossOrigin = 'anonymous'
-terrainImage.onload = function () {
-  handleLoadedTexture(terrainTexture, terrainImage)
-}
-terrainImage.src = '/terrain.jpg'
-
+// Our vertex shader just draws the terrain based on the vertices that we pass in
 var vertexShader = `
 attribute vec3 aVertexPosition;
 attribute vec2 aTextureCoord;
@@ -397,89 +391,124 @@ void main (void) {
 }
 `
 
+// Here we create our fragment shader
 var fragmentShader = `
 precision mediump float;
 
 varying vec2 vTextureCoord;
 
+// These are our blend map and the
+// terrain texture atlas that we loaded
 uniform sampler2D uBlendmapSampler;
 uniform sampler2D uTerrainSampler;
 
 void main (void) {
- vec4 blendColor = texture2D(uBlendmapSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+   // Read the color from our blend map based on this vertex's uv coord
+   vec4 blendColor = texture2D(uBlendmapSampler, vec2(vTextureCoord.s, vTextureCoord.t));
 
- vec4 rockColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * 6.0, 0.5)));
+   float numRepeats = 6.0;
+   // Our texture atlas is split into four sections, if you open the terrain.jpg image you'll see what I mean
+   // Here we take our texture coordinates and then shrink and move them to fit within each of the four sections.
+   // We then multiply by numRepeats to make the texture tile. If you play around with these numbers you'll get
+   // A good sense of how this works
+   vec4 rockColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * numRepeats, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * numRepeats, 0.5)));
+   vec4 lavaColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * numRepeats, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * numRepeats, 0.5) - 0.5));
+   vec4 mossColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * numRepeats, 0.5), mod(vTextureCoord.t * 0.5 * numRepeats, 0.5) - 0.5));
+   vec4 waterColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * numRepeats, 0.5), mod(vTextureCoord.t * 0.5 * numRepeats, 0.5)));
 
- vec4 lavaColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5) + 0.5, mod(vTextureCoord.t * 0.5 * 6.0, 0.5) - 0.5));
+   // Subtract the red, green and blue to get the black component
+   // of our blend map
+   float blackWeight = 1.0 - blendColor.x - blendColor.y - blendColor.z;
 
- vec4 mossColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5), mod(vTextureCoord.t * 0.5 * 6.0, 0.5) - 0.5));
-
- vec4 waterColor = texture2D(uTerrainSampler, vec2(mod(vTextureCoord.s * 0.5 * 6.0, 0.5), mod(vTextureCoord.t * 0.5 * 6.0, 0.5)));
-
- float blackWeight = 1.0 - blendColor.x - blendColor.y - blendColor.z;
-
- gl_FragColor = rockColor * blackWeight +
- lavaColor * blendColor.x +
- mossColor * blendColor.y +
- waterColor * blendColor.z;
+   // black component is rock
+   gl_FragColor = rockColor * blackWeight +
+   // red component is lava
+   lavaColor * blendColor.x +
+   // green component is moss
+   mossColor * blendColor.y +
+   // blue component is water
+   waterColor * blendColor.z;
 }
 `
 
+// Create a shader program using the vertex and fragment shaders
+// that we wrote above
 var vert = gl.createShader(gl.VERTEX_SHADER)
 var frag = gl.createShader(gl.FRAGMENT_SHADER)
-
 gl.shaderSource(vert, vertexShader)
 gl.compileShader(vert)
-
 gl.shaderSource(frag, fragmentShader)
 gl.compileShader(frag)
-
 var shaderProgram = gl.createProgram()
 gl.attachShader(shaderProgram, vert)
 gl.attachShader(shaderProgram, frag)
-
 gl.linkProgram(shaderProgram)
-
 gl.useProgram(shaderProgram)
 
+// Set our WebGL context up with all of the state that in needs
+// in order to draw our multitextured terrain
 function setupWebGLState () {
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
+  // gi.STATIC_DRAW is a hint that we're storing this data once but
+  // using it to draw over and over and over again. The underlying OpenGL
+  // implementation will use this to optimize how the buffer to fit
+  // our intended usage
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexUVsBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW)
+
+  // Vertex positions
   var vertexPositionAttribute = gl.getAttribLocation(shaderProgram, 'aVertexPosition')
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
   gl.enableVertexAttribArray(vertexPositionAttribute)
   gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
 
+  // Vertex uvs
   var textureCoordAttribute = gl.getAttribLocation(shaderProgram, 'aTextureCoord')
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexUVsBuffer)
   gl.enableVertexAttribArray(textureCoordAttribute)
   gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0)
 
+  // Terrain texture atlas
   var terrainSamplerUniform = gl.getUniformLocation(shaderProgram, 'uTerrainSampler')
   gl.activeTexture(gl.TEXTURE1)
   gl.bindTexture(gl.TEXTURE_2D, terrainTexture)
   gl.uniform1i(terrainSamplerUniform, 1)
 
+  // Blendmap
   var blendmapSamplerUniform = gl.getUniformLocation(shaderProgram, 'uBlendmapSampler')
   gl.activeTexture(gl.TEXTURE0)
   gl.bindTexture(gl.TEXTURE_2D, blendmapTexture)
   gl.uniform1i(blendmapSamplerUniform, 0)
 
+  // Model view matrix
   var mvMatrixUniform = gl.getUniformLocation(shaderProgram, 'uMVMatrix')
+  // This is a matrix that moves our terrain 32 units to the left and 32 units down
   gl.uniformMatrix4fv(mvMatrixUniform, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -32, -32, 0, 1])
 
-  // TODO: How come we need a perspective matrix?
+  // Perspective matrix
   var pMatrixUniform = gl.getUniformLocation(shaderProgram, 'uPMatrix')
   gl.uniformMatrix4fv(pMatrixUniform, false, require('gl-mat4/perspective')([], Math.PI / 4, 400 / 400, 0.1, 1000))
-}
-// TODO: Use create-draw-function. Write unit tests two accept two textures
-function drawWebGLCanvas () {
-  if (bothImagesLoaded) {
-    gl.clear(gl.COLOR_BUFFER_BIT)
-    gl.viewport(0, 0, 512, 512)
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
+  // Order of vertices to draw for our terrain
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
+}
+
+// Redraw out paintbrush canvas and WebGL canvas every request animation frame
+function drawBothCanvases () {
+  redrawPaintCanvas()
+
+  if (bothImagesLoaded) {
+    // Clear the WebGL canvas terrain
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    // Redraw the WebGL canvas terrain
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0)
   }
 
-  window.requestAnimationFrame(drawWebGLCanvas)
+  window.requestAnimationFrame(drawBothCanvases)
 }
-drawWebGLCanvas()
+// Start our reequest animation frame draw loop
+drawBothCanvases()
