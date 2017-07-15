@@ -5,12 +5,12 @@
 // Create the canvas that we will be using our paintbrush on.
 // The contents of this canvas will become to blend map that
 // we use to multitexture our WebGL plane.
-var drawCanvas = document.createElement('canvas')
-drawCanvas.width = 256
-drawCanvas.height = 256
-drawCanvas.style.width = '256px'
-drawCanvas.style.height = '256px'
-drawCanvas.style.border = 'solid 1px rgba(0, 0, 0, 0.1)'
+var blendCanvas = document.createElement('canvas')
+blendCanvas.width = 256
+blendCanvas.height = 256
+blendCanvas.style.width = '256px'
+blendCanvas.style.height = '256px'
+blendCanvas.style.border = 'solid 1px rgba(0, 0, 0, 0.1)'
 
 // We start our paintbrush
 var brushColor = 'purple'
@@ -134,12 +134,13 @@ mountElem.appendChild(colorDisplayContainer)
 var webGLCanvas = document.createElement('canvas')
 webGLCanvas.width = 512
 webGLCanvas.height = 512
+webGLCanvas.style.cursor = 'not-allowed'
 mountElem.appendChild(webGLCanvas)
 
 // Add our paintbrush canvas and WebGL canvas into the page
 var canvasContainer = document.createElement('div')
 canvasContainer.style.display = 'flex'
-canvasContainer.appendChild(drawCanvas)
+canvasContainer.appendChild(blendCanvas)
 canvasContainer.appendChild(webGLCanvas)
 mountElem.appendChild(canvasContainer)
 
@@ -149,7 +150,7 @@ mountElem.appendChild(canvasContainer)
 
 // Get our 2d context for our painting canvas. This allows
 // us to draw onto our 2d canvas
-var canvas2dContext = drawCanvas.getContext('2d')
+var canvas2dContext = blendCanvas.getContext('2d')
 canvas2dContext.fillStyle = brushColor
 canvas2dContext.fillRect(0, 0, canvas2dContext.canvas.width, canvas2dContext.canvas.height)
 
@@ -161,8 +162,8 @@ var isPainting = false
 function startPainting (e) {
   isPainting = true
   addPoint(
-      e.pageX - drawCanvas.offsetLeft,
-      e.pageY - drawCanvas.offsetTop,
+      e.pageX - blendCanvas.offsetLeft,
+      e.pageY - blendCanvas.offsetTop,
       // This indicates not to connect this new paint with the
       // previous blob of paint
       false
@@ -174,8 +175,8 @@ function startPainting (e) {
 function movePaintbrush (e) {
   if (isPainting) {
     addPoint(
-      (e.pageX || e.changedTouches[0].pageX) - drawCanvas.offsetLeft,
-      (e.pageY || e.changedTouches[0].pageY) - drawCanvas.offsetTop,
+      (e.pageX || e.changedTouches[0].pageX) - blendCanvas.offsetLeft,
+      (e.pageY || e.changedTouches[0].pageY) - blendCanvas.offsetTop,
       // This indicates to connect this blob of paint with
       // the previous blob of paint
       true
@@ -194,12 +195,12 @@ function stopPainting () {
 }
 
 // Add event listeners to draw when we mouse / touching the canvas
-drawCanvas.addEventListener('mousedown', startPainting)
-drawCanvas.addEventListener('touchstart', startPainting)
-drawCanvas.addEventListener('mousemove', movePaintbrush)
-drawCanvas.addEventListener('touchmove', movePaintbrush)
-drawCanvas.addEventListener('mouseup', stopPainting)
-drawCanvas.addEventListener('touchend', stopPainting)
+blendCanvas.addEventListener('mousedown', startPainting)
+blendCanvas.addEventListener('touchstart', startPainting)
+blendCanvas.addEventListener('mousemove', movePaintbrush)
+blendCanvas.addEventListener('touchmove', movePaintbrush)
+blendCanvas.addEventListener('mouseup', stopPainting)
+blendCanvas.addEventListener('touchend', stopPainting)
 
 // Keep track of everytime the user adds a new blob of paint.
 // When we repaint our canvas we go through all of the blobs
@@ -260,7 +261,7 @@ function redrawPaintCanvas () {
   }
 
   // Make our WebGL canvas's blend map reload itself from the contents of our canvas
-  blendmapImage.src = drawCanvas.toDataURL()
+  blendmapImage.src = blendCanvas.toDataURL()
 }
 
 /**
@@ -341,7 +342,7 @@ for (var y = 0; y < numRowsColumns; y++) {
 // Create a WebGL texture for our blend map
 var blendmapTexture = gl.createTexture()
 var blendmapImage = new window.Image()
-blendmapImage.src = drawCanvas.toDataURL()
+blendmapImage.src = blendCanvas.toDataURL()
 blendmapImage.onload = function () {
   handleLoadedTexture(blendmapTexture, blendmapImage)
 }
@@ -373,7 +374,6 @@ function handleLoadedTexture (texture, image) {
   }
   bothImagesLoaded = true
 }
-
 
 // Our vertex shader just draws the terrain based on the vertices that we pass in
 var vertexShader = `
