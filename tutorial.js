@@ -454,7 +454,7 @@ gl.useProgram(shaderProgram)
 // in order to draw our multitextured terrain
 function setupWebGLState () {
   // Create WebGLBuffers for our vertices. We will buffer their
-  // positions, the other to draw them, and the coordinates in our
+  // positions, the order to draw them, and the coordinates in our
   // texture (uvs) that each vertex should use
   var vertexPositionBuffer = gl.createBuffer()
   var vertexIndexBuffer = gl.createBuffer()
