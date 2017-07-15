@@ -286,13 +286,6 @@ var gl = webGLCanvas.getContext('webgl')
 gl.clearColor(0.0, 0.0, 0.0, 1.0)
 gl.viewport(0, 0, 512, 512)
 
-// Create WebGLBuffers for our vertices. We will buffer their
-// positions, the other to draw them, and the coordinates in our
-// texture (uvs) that each vertex should use
-var vertexPositionBuffer = gl.createBuffer()
-var vertexIndexBuffer = gl.createBuffer()
-var vertexUVsBuffer = gl.createBuffer()
-
 // We're going to generate a terrain. A terrain is just
 // a bunch of triangles in a grid. The points on the triangles have different
 // heights. To make this tutorial a little simpler, we're just going to make
@@ -460,6 +453,13 @@ gl.useProgram(shaderProgram)
 // Set our WebGL context up with all of the state that in needs
 // in order to draw our multitextured terrain
 function setupWebGLState () {
+  // Create WebGLBuffers for our vertices. We will buffer their
+  // positions, the other to draw them, and the coordinates in our
+  // texture (uvs) that each vertex should use
+  var vertexPositionBuffer = gl.createBuffer()
+  var vertexIndexBuffer = gl.createBuffer()
+  var vertexUVsBuffer = gl.createBuffer()
+
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
   // gi.STATIC_DRAW is a hint that we're storing this data once but
   // using it to draw over and over and over again. The underlying OpenGL
@@ -522,5 +522,5 @@ function drawBothCanvases () {
 
   window.requestAnimationFrame(drawBothCanvases)
 }
-// Start our reequest animation frame draw loop
+// Start our request animation frame draw loop
 drawBothCanvases()
