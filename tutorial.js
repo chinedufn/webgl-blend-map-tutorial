@@ -52,11 +52,20 @@ function addSliderLabel (label, colorSlider) {
   return sliderWrapper
 }
 
+// Create the slider that controls your brush size
+var brushSizeSlider = document.createElement('input')
+brushSizeSlider.type = 'range'
+brushSizeSlider.value = 20
+brushSizeSlider.min = 0
+brushSizeSlider.max = 40
+brushSizeSlider.step = 1
+
 // Create a div to hold all of our sliders
 var sliderContainer = document.createElement('div')
 sliderContainer.appendChild(addSliderLabel('R', redSlider))
 sliderContainer.appendChild(addSliderLabel('G', greenSlider))
 sliderContainer.appendChild(addSliderLabel('B', blueSlider))
+sliderContainer.appendChild(addSliderLabel('Brush Size', brushSizeSlider))
 
 // Reset the display that shows what the current brush color is
 function setColorDisplays () {
@@ -166,7 +175,8 @@ function startPainting (e) {
       e.pageY - blendCanvas.offsetTop,
       // This indicates not to connect this new paint with the
       // previous blob of paint
-      false
+      false,
+      brushSizeSlider.value
   )
 }
 
@@ -179,7 +189,8 @@ function movePaintbrush (e) {
       (e.pageY || e.changedTouches[0].pageY) - blendCanvas.offsetTop,
       // This indicates to connect this blob of paint with
       // the previous blob of paint
-      true
+      true,
+      brushSizeSlider.value
     )
   }
 }
@@ -207,12 +218,13 @@ blendCanvas.addEventListener('touchend', stopPainting)
 // of paint that they added and redraw to the canvas at
 // those points.
 var allPoints = []
-function addPoint (x, y, connectWithPrevious) {
+function addPoint (x, y, connectWithPrevious, size) {
   allPoints.push({
     x: x,
     y: y,
     connect: connectWithPrevious,
-    color: brushColor
+    color: brushColor,
+    size: size
   })
 }
 
@@ -239,7 +251,6 @@ function redrawPaintCanvas () {
 
   // Set the line type and size
   canvas2dContext.lineJoin = 'round'
-  canvas2dContext.lineWidth = 20
 
   for (var i = 0; i < allPoints.length; i++) {
     canvas2dContext.beginPath()
@@ -257,6 +268,7 @@ function redrawPaintCanvas () {
     canvas2dContext.lineTo(allPoints[i].x, allPoints[i].y)
     canvas2dContext.closePath()
     canvas2dContext.strokeStyle = allPoints[i].color
+    canvas2dContext.lineWidth = allPoints[i].size
     canvas2dContext.stroke()
   }
 
