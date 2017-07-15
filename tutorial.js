@@ -169,6 +169,7 @@ var isPainting = false
 
 // When the user clicks or touches the canvas we begin painting to our canvas
 function startPainting (e) {
+  e.preventDefault()
   isPainting = true
   addPoint(
       e.pageX - blendCanvas.offsetLeft,
@@ -183,6 +184,7 @@ function startPainting (e) {
 // Add a new point to our canvas and connect it with the previous point.
 // This happens when you're dragging your mouse / finger
 function movePaintbrush (e) {
+  e.preventDefault()
   if (isPainting) {
     addPoint(
       (e.pageX || e.changedTouches[0].pageX) - blendCanvas.offsetLeft,
@@ -200,7 +202,8 @@ function movePaintbrush (e) {
 // their mouse so that our undo button can revert us back to that
 // point
 var lastMouseReleaseIndices = []
-function stopPainting () {
+function stopPainting (e) {
+  e.preventDefault()
   lastMouseReleaseIndices.push(allPoints.length - 1)
   isPainting = false
 }
